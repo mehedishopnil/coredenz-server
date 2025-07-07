@@ -29,7 +29,7 @@ async function connectDB() {
     const db = client.db("coredenz");
     const usersCollection = db.collection("users");
     const productsCollection = db.collection("products");
-    const cartCollection = db.collection("cart");
+    const cartCollection = db.collection("cartData");
 
     // ======================
     // Enhanced User Routes
