@@ -99,52 +99,23 @@ async function connectDB() {
     // ======================
     // Cart Routes
     // ======================
-    app.post('/cart', async (req, res) => {
-      const cartItem = req.body;
-      
-      // Validate required fields
-      if (!cartItem.userId || !cartItem.productId || !cartItem.quantity) {
-        return res.status(400).json({ message: 'Missing required fields' });
-      }
+   app.post('/cart', async (req, res) => {
+  const cartItem = req.body;
 
-      try {
-        // Check if product exists
-        const product = await productsCollection.findOne({ 
-          _id: new ObjectId(cartItem.productId) 
-        });
-        if (!product) {
-          return res.status(404).json({ message: 'Product not found' });
-        }
-
-        // Check if item already in cart
-        const existingItem = await cartCollection.findOne({
-          userId: cartItem.userId,
-          productId: cartItem.productId
-        });
-
-        let result;
-        if (existingItem) {
-          // Update quantity if item exists
-          result = await cartCollection.updateOne(
-            { _id: existingItem._id },
-            { $set: { quantity: existingItem.quantity + cartItem.quantity } }
-          );
-        } else {
-          // Add new item to cart
-          result = await cartCollection.insertOne({
-            ...cartItem,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            productDetails: product // Store product details for easy access
-          });
-        }
-
-        res.status(201).json(result);
-      } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
-      }
+  try {
+    const result = await cartCollection.insertOne({
+      ...cartItem,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
+
+    res.status(201).json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
     app.get('/cart/:email', async (req, res) => {
       try {
