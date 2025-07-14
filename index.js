@@ -30,6 +30,7 @@ async function connectDB() {
     const usersCollection = db.collection("users");
     const productsCollection = db.collection("products");
     const cartCollection = db.collection("cartData");
+    const ordersCollection = db.collection("orders");
 
     // ======================
     // Enhanced User Routes
@@ -229,6 +230,57 @@ app.delete('/cart/:productId', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// ======================
+    //Order Routes
+    // ======================
+
+   // POST: Create a new order
+app.post('/orders', async (req, res) => {
+  const order = req.body;
+  if (!order.userEmail || !order.products || order.products.length === 0) {
+    return res.status(400).json({ message: 'Invalid order data' });
+  }
+
+  try {
+    const result = await ordersCollection.insertOne({
+      ...order,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    res.status(201).json({ insertedId: result.insertedId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to create order' });
+  }
+});
+
+
+
+// GET: Fetch orders by user email
+app.get('/orders/:email', async (req, res) => {
+  const email = req.params.email;
+
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+
+  try {
+    const orders = await ordersCollection
+      .find({ userEmail: email })
+      .sort({ createdAt: -1 }) // latest first
+      .toArray();
+
+    res.json(orders);
+  } catch (err) {
+    console.error("❌ Error fetching orders:", err);
+    res.status(500).json({ message: 'Failed to fetch orders', error: err.message });
+  }
+});
+
+
+
+
 
 
     // ======================
