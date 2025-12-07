@@ -24,13 +24,14 @@ const client = new MongoClient(uri, {
 async function connectDB() {
   try {
     await client.connect();
-    console.log("✅ MongoDB Connected Successfully");
+    console.log('✅ MongoDB Connected Successfully');
 
-    const db = client.db("coredenz");
-    const usersCollection = db.collection("users");
-    const productsCollection = db.collection("products");
-    const cartCollection = db.collection("cartData");
-    const ordersCollection = db.collection("orders");
+    const db = client.db('coredenz');
+    const usersCollection = db.collection('users');
+    const productsCollection = db.collection('products');
+    const cartCollection = db.collection('cartData');
+    const ordersCollection = db.collection('orders');
+    const servicesCollection = db.collection('services');
 
     // ======================
     // Enhanced User Routes
@@ -60,7 +61,7 @@ async function connectDB() {
       const result = await usersCollection.insertOne({
         ...user,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
       res.status(201).json(result);
     });
@@ -76,7 +77,7 @@ async function connectDB() {
     app.get('/products/:id', async (req, res) => {
       try {
         const product = await productsCollection.findOne({
-          _id: new ObjectId(req.params.id)
+          _id: new ObjectId(req.params.id),
         });
         if (!product) {
           return res.status(404).json({ message: 'Product not found' });
@@ -92,10 +93,22 @@ async function connectDB() {
       const result = await productsCollection.insertOne({
         ...product,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
       res.status(201).json(result);
     });
+
+    // ======================
+    // Services Routes
+    // ======================
+    
+    app.get('/services', async (_req, res) => {
+      const services = await servicesCollection.find().toArray();
+      res.json(services);
+    });
+   
+
+
 
 
 
@@ -106,9 +119,11 @@ async function connectDB() {
     // Get all cart items for a user
     app.get('/cart/:email', async (req, res) => {
       try {
-        const cartItems = await cartCollection.find({
-          userEmail: req.params.email
-        }).toArray();
+        const cartItems = await cartCollection
+          .find({
+            userEmail: req.params.email,
+          })
+          .toArray();
         res.json(cartItems);
       } catch (err) {
         console.error(err);
@@ -136,12 +151,14 @@ async function connectDB() {
             {
               $set: {
                 quantity: existingItem.quantity + quantity,
-                updatedAt: new Date()
-              }
+                updatedAt: new Date(),
+              },
             }
           );
 
-          const updatedItem = await cartCollection.findOne({ _id: existingItem._id });
+          const updatedItem = await cartCollection.findOne({
+            _id: existingItem._id,
+          });
           return res.json(updatedItem);
         }
 
@@ -151,18 +168,19 @@ async function connectDB() {
           productId,
           quantity,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         };
 
         const insertResult = await cartCollection.insertOne(newItem);
-        const insertedItem = await cartCollection.findOne({ _id: insertResult.insertedId });
+        const insertedItem = await cartCollection.findOne({
+          _id: insertResult.insertedId,
+        });
         res.status(201).json(insertedItem);
       } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
       }
     });
-
 
     // Update cart item quantity - using PATCH
     app.patch('/cart/:productId', async (req, res) => {
@@ -182,16 +200,16 @@ async function connectDB() {
         const result = await cartCollection.findOneAndUpdate(
           {
             userEmail,
-            productId // Using numeric productId
+            productId, // Using numeric productId
           },
           {
             $set: {
               quantity: parseInt(quantity),
-              updatedAt: new Date()
-            }
+              updatedAt: new Date(),
+            },
           },
           {
-            returnDocument: 'after'
+            returnDocument: 'after',
           }
         );
 
@@ -204,7 +222,7 @@ async function connectDB() {
         console.error('Error updating cart quantity:', err);
         res.status(500).json({
           message: 'Failed to update cart item',
-          error: err.message
+          error: err.message,
         });
       }
     });
@@ -219,7 +237,9 @@ async function connectDB() {
           return res.status(400).json({ message: 'Invalid cart item ID' });
         }
 
-        const result = await cartCollection.deleteOne({ _id: new ObjectId(id) });
+        const result = await cartCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
 
         if (result.deletedCount === 0) {
           return res.status(404).json({ message: 'Cart item not found' });
@@ -231,7 +251,6 @@ async function connectDB() {
         res.status(500).json({ message: 'Server error' });
       }
     });
-
 
     // ======================
     //Order Routes
@@ -248,7 +267,7 @@ async function connectDB() {
         const result = await ordersCollection.insertOne({
           ...order,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         });
         res.status(201).json({ insertedId: result.insertedId });
       } catch (err) {
@@ -256,8 +275,6 @@ async function connectDB() {
         res.status(500).json({ message: 'Failed to create order' });
       }
     });
-
-
 
     // GET: Fetch orders by user email
     app.get('/orders/:email', async (req, res) => {
@@ -275,32 +292,27 @@ async function connectDB() {
 
         res.json(orders);
       } catch (err) {
-        console.error("❌ Error fetching orders:", err);
-        res.status(500).json({ message: 'Failed to fetch orders', error: err.message });
+        console.error('❌ Error fetching orders:', err);
+        res
+          .status(500)
+          .json({ message: 'Failed to fetch orders', error: err.message });
       }
     });
-
-
-
-
-
 
     // ======================
     // Health Check & Root
     // ======================
-    app.get("/", (_req, res) => res.send("Server is running"));
-    app.get("/health", (_req, res) =>
+    app.get('/', (_req, res) => res.send('Server is running'));
+    app.get('/health', (_req, res) =>
       res.json({
-        status: "ok",
+        status: 'ok',
         time: new Date(),
-        db: client.topology?.isConnected() ? "connected" : "disconnected",
+        db: client.topology?.isConnected() ? 'connected' : 'disconnected',
       })
     );
 
     // Start server
-    app.listen(port, () =>
-      console.log(`🚀 Server running on port ${port}`)
-    );
+    app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
   } catch (err) {
     console.error("❌ MongoDB Connection Failed", err);
     process.exit(1);
